@@ -34,8 +34,8 @@ def write_stl_triangle(f, triangle, normal=None):
 def write_stl_bin_header(f, num_triangles):
     """ Write the header for a binary STL file. The 1st line is 80 characters (usually blank), the 2nd line is a UINT32
     for the number of triangles.    """
-    #f.write('solid ' + name + '\n' )
-    f.write(struct.pack("80sI", '', num_triangles))
+    header_str = ''
+    f.write(struct.pack("80sI", header_str, num_triangles))
 
 
 def write_stl_bin_triangle(f, triangle, normal=None):

@@ -3,7 +3,7 @@
 Create a cylindrical die for an image.
 
 Todo:
-    - out_radius not working... bumps don't get bigger
+    - OpenSCAD can't read binary STL (header issue?)
     - Convert to numpy
     - add cmd line options for file_name, stl_name, binary/txt
 
@@ -29,14 +29,14 @@ Vertex3 = collections.namedtuple('Vertex', 'x y z')
 Triangle = collections.namedtuple('Triangle', 'v1 v2 v3')
 
 #img_name = 'output_001.bmp'
-#img_name = 'freize1bw.jpg'
-img_name = 'freize2bw.jpg'
+img_name = 'freize1bw.jpg'
+#img_name = 'freize2bw.jpg'
 #img_name = 'freize3bw.jpg'
 
 
 stl_name = 'frieze.stl'
-inner_radius = 50.0
-outer_radius = 58.0
+inner_radius = 80.0
+outer_radius = 86.0
 z_scale=1.0
 
 invert_z = False
@@ -193,7 +193,7 @@ if __name__ == '__main__':
         pystl.write_stl_header(f)
     else:
         f = open(stl_name, 'wb')
-        num_triangles = (im.width*im.height*2) + (im.width * 2)
+        num_triangles = (im.width*(im.height-1)*2) + (im.width * 2)
         pystl.write_stl_bin_header(f, num_triangles)
 
     draw_cylinder(f, im)
