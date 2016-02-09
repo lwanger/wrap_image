@@ -3,11 +3,7 @@
 Create a cylindrical die for an image.
 
 Todo:
-
-- Write a binary STL file
-- Why the numerical error in the triangles?
-- Add height based on image value
-- Test in OpenSCAD
+    - add cmd line options for file_name, stl_name, binary/txt
 
 Len Wanger - 2/7/2016
 
@@ -21,11 +17,19 @@ import pystl
 Vertex3 = collections.namedtuple('Vertex', 'x y z')
 Triangle = collections.namedtuple('Triangle', 'v1 v2 v3')
 
-img_name = 'face2.png'
+#img_name = 'output_001.bmp'
+img_name = 'freize1bw.jpg'
+#img_name = 'freize2bw.jpg'
+
+
 stl_name = 'frieze.stl'
 inner_radius = 50.0
 outer_radius = 55.0
+
 radius_diff = outer_radius - inner_radius
+
+#stl_type = 'txt'
+stl_type = 'bin'
 
 
 def make_triangle(d):
@@ -54,18 +58,23 @@ def add_quad_to_stl(f, c1, c2, c3, c4, fi, fj, radians_per_pixel):
     v4 = Vertex3(x4, y4, fj + 1.0)
     t1 = Triangle(v1, v2, v4)
     t2 = Triangle(v2, v3, v4)
-    pystl.write_stl_triangle(f, t1)
-    pystl.write_stl_triangle(f, t2)
+
+    if stl_type == 'txt':
+        pystl.write_stl_triangle(f, t1)
+        pystl.write_stl_triangle(f, t2)
+    else:
+        pystl.write_stl_bin_triangle(f, t1)
+        pystl.write_stl_bin_triangle(f, t2)
 
 
 def draw_cylinder(f, im):
     pi2 = math.pi * 2.0
     radians_per_pixel = pi2 / float(im.width)
-    radius_diff = outer_radius - inner_radius
 
     for i in range(im.width-1):
         for j in range(im.height-1):
-            fi, fj = float(i), float(j)
+            fi = float(i)
+            fj = float(j)
 
             c1 = im.getpixel((i, j))
             c2 = im.getpixel((i+1, j))
@@ -84,7 +93,7 @@ def draw_cylinder(f, im):
         add_quad_to_stl(f, c1, c2, c3, c4, fi, fj, radians_per_pixel)
 
 
-def draw_end_caps(f, im, j):
+def draw_end_caps(f, im, j, reverse_normal=False):
     pi2 = math.pi * 2.0
     radians_per_pixel = pi2 / float(im.width)
     radius_diff = outer_radius - inner_radius
@@ -105,11 +114,17 @@ def draw_end_caps(f, im, j):
         v1 = Vertex3(x1, y1, fj)
         v2 = Vertex3(x2, y2, fj)
         v3 = Vertex3(0.0, 0.0, fj)
-        t1 = Triangle(v1, v2, v3)
+        #t1 = Triangle(v1, v2, v3)
 
-        pystl.write_stl_triangle(f, t1)
+        if reverse_normal:
+            t1 = Triangle(v1, v2, v3)
+        else:
+            t1 = Triangle(v1, v3, v2)
 
-    pystl.write_stl_triangle(f, t1)
+        if stl_type == 'txt':
+            pystl.write_stl_triangle(f, t1)
+        else:
+            pystl.write_stl_bin_triangle(f, t1)
 
     # draw from last to first wedge
     fi = float(im.width-1)
@@ -125,24 +140,33 @@ def draw_end_caps(f, im, j):
     v2 = Vertex3(x2, y2, fj)
     v3 = Vertex3(0.0, 0.0, fj)
     t1 = Triangle(v1, v2, v3)
-    pystl.write_stl_triangle(f, t1)
+    n = (0.0, 0.0, 1.0)
+    if stl_type == 'txt':
+        pystl.write_stl_triangle(f, t1, n)
+    else:
+        pystl.write_stl_bin_triangle(f, t1, n)
 
 if __name__ == '__main__':
-
     print("starting")
     convert_to = 'L'
     _ = Image.open(img_name)
     im = _.convert(convert_to)
-    #print('im_size: {}, {}'.format(im.width, im.height))
 
-    with open(stl_name, 'w') as f:
+    if stl_type == 'txt':
+        f = open(stl_name, 'w')
         pystl.write_stl_header(f)
+    else:
+        f = open(stl_name, 'wb')
+        num_triangles = (im.width*im.height*2) + (im.width * 2)
+        pystl.write_stl_bin_header(f, num_triangles)
 
-        draw_cylinder(f, im)
-        draw_end_caps(f, im, 0.0)
-        draw_end_caps(f, im, im.height)
+    draw_cylinder(f, im)
+    draw_end_caps(f, im, 0.0)
+    draw_end_caps(f, im, im.height, reverse_normal=True)
 
-        pystl.write_stl_trailer(f)
+    if stl_type == 'txt':
+            pystl.write_stl_trailer(f)
 
+    f.close()
     print("done")
 
