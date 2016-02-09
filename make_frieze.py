@@ -2,6 +2,11 @@
 """
 Create a cylindrical die for an image.
 
+- IO on image
+- deeper pattern
+- cutting edges
+
+
 Todo:
     - OpenSCAD can't read binary STL (header issue?)
     - Convert to numpy
@@ -29,14 +34,21 @@ Vertex3 = collections.namedtuple('Vertex', 'x y z')
 Triangle = collections.namedtuple('Triangle', 'v1 v2 v3')
 
 #img_name = 'output_001.bmp'
-img_name = 'freize1bw.jpg'
+#img_name = 'freize1bw.jpg'
+#img_name = 'io_cookie2.jpg'
+img_name = 'io_cookie3.jpg'
 #img_name = 'freize2bw.jpg'
 #img_name = 'freize3bw.jpg'
 
 
 stl_name = 'frieze.stl'
-inner_radius = 80.0
-outer_radius = 86.0
+inner_radius = 70.0
+outer_radius = 80.0
+
+#add_hole = False
+add_hole = True
+hole_radius = 40.0
+
 z_scale=1.0
 
 invert_z = False
@@ -70,7 +82,14 @@ def calc_offset(c, max_c, scale, invert_z=False):
         return ((fc - mc) / mc) * s
 
 
-def add_quad_to_stl(f, c1, c2, c3, c4, fi, fj, radians_per_pixel):
+def add_quad_to_stl(f, v1, v2, v3, v4):
+    t1 = Triangle(v1, v2, v4)
+    t2 = Triangle(v2, v3, v4)
+    pystl.write_stl_triangle(f, t1, bin=stl_type)
+    pystl.write_stl_triangle(f, t2, bin=stl_type)
+
+
+def draw_pixel_box(f, c1, c2, c3, c4, fi, fj, radians_per_pixel):
     c1_offset = calc_offset(c1, 255.0, radius_diff, invert_z)
     c2_offset = calc_offset(c2, 255.0, radius_diff, invert_z)
     c3_offset = calc_offset(c3, 255.0, radius_diff, invert_z)
@@ -84,15 +103,8 @@ def add_quad_to_stl(f, c1, c2, c3, c4, fi, fj, radians_per_pixel):
     v2 = Vertex3(x2, y2, (fj)*z_scale)
     v3 = Vertex3(x3, y3, (fj + 1.0)*z_scale)
     v4 = Vertex3(x4, y4, (fj + 1.0)*z_scale)
-    t1 = Triangle(v1, v2, v4)
-    t2 = Triangle(v2, v3, v4)
 
-    if stl_type == 'txt':
-        pystl.write_stl_triangle(f, t1)
-        pystl.write_stl_triangle(f, t2)
-    else:
-        pystl.write_stl_bin_triangle(f, t1)
-        pystl.write_stl_bin_triangle(f, t2)
+    add_quad_to_stl(f, v1, v2, v3, v4)
 
 
 def draw_cylinder(f, im):
@@ -108,7 +120,7 @@ def draw_cylinder(f, im):
             c2 = im.getpixel((i+1, j))
             c3 = im.getpixel((i+1, j+1))
             c4 = im.getpixel((i, j+1))
-            add_quad_to_stl(f, c1, c2, c3, c4, fi, fj, radians_per_pixel)
+            draw_pixel_box(f, c1, c2, c3, c4, fi, fj, radians_per_pixel)
 
     # add the seam (first to last)
     fi = float(im.width-1)
@@ -118,90 +130,124 @@ def draw_cylinder(f, im):
         c2 = im.getpixel((0, j))
         c3 = im.getpixel((0, j+1))
         c4 = im.getpixel((im.width-1, j+1))
-        add_quad_to_stl(f, c1, c2, c3, c4, fi, fj, radians_per_pixel)
+        draw_pixel_box(f, c1, c2, c3, c4, fi, fj, radians_per_pixel)
 
 
-def draw_end_caps(f, im, j, reverse_normal=False):
-    pi2 = math.pi * 2.0
-    radians_per_pixel = pi2 / float(im.width)
-    radius_diff = outer_radius - inner_radius
+def draw_end_cap_segment(f, im, i1, i2, fj, radians_per_pixel, add_hole, reverse_normal):
+    fi1= float(i1)
+    fi2= float(i2)
 
-    fj = float(j)
+    c1 = im.getpixel((i1,0))
+    c2 = im.getpixel((i2,0))
 
-    for i in range(im.width-1):
-        fi= float(i)
-        c1 = im.getpixel((i,0))
-        c2 = im.getpixel((i+1,0))
-        # c1_offset = ((float(c1)-255.0)/255.0) * radius_diff
-        # c2_offset = ((float(c2)-255.0)/255.0) * radius_diff
+    c1_offset = calc_offset(c1, 255.0, radius_diff, invert_z)
+    c2_offset = calc_offset(c2, 255.0, radius_diff, invert_z)
 
-        c1_offset = calc_offset(c1, 255.0, radius_diff, invert_z)
-        c2_offset = calc_offset(c2, 255.0, radius_diff, invert_z)
+    x1 = (inner_radius + c1_offset) * math.cos(fi1 * radians_per_pixel)
+    y1 = (inner_radius + c1_offset) * math.sin(fi1 * radians_per_pixel)
+    x2 = (inner_radius + c2_offset) * math.cos((fi2) * radians_per_pixel)
+    y2 = (inner_radius + c2_offset) * math.sin((fi2) * radians_per_pixel)
 
-        x1 = (inner_radius + c1_offset) * math.cos(fi * radians_per_pixel)
-        y1 = (inner_radius + c1_offset) * math.sin(fi * radians_per_pixel)
-        x2 = (inner_radius + c2_offset) * math.cos((fi + 1.0) * radians_per_pixel)
-        y2 = (inner_radius + c2_offset) * math.sin((fi + 1.0) * radians_per_pixel)
+    v1 = Vertex3(x1, y1, fj*z_scale)
+    v2 = Vertex3(x2, y2, fj*z_scale)
 
-        v1 = Vertex3(x1, y1, fj*z_scale)
-        v2 = Vertex3(x2, y2, fj*z_scale)
+    if add_hole:
+        x3 = hole_radius * math.cos((fi2) * radians_per_pixel)
+        y3 = hole_radius * math.sin((fi2) * radians_per_pixel)
+        x4 = hole_radius * math.cos((fi1) * radians_per_pixel)
+        y4 = hole_radius * math.sin((fi1) * radians_per_pixel)
+
+        v3 = Vertex3(x3, y3, fj*z_scale)
+        v4 = Vertex3(x4, y4, fj*z_scale)
+
+        if reverse_normal:
+            add_quad_to_stl(f, v1, v2, v3, v4)
+        else:
+            add_quad_to_stl(f, v4, v3, v2, v1)
+    else:
         v3 = Vertex3(0.0, 0.0, fj*z_scale)
-        #t1 = Triangle(v1, v2, v3)
 
         if reverse_normal:
             t1 = Triangle(v1, v2, v3)
         else:
             t1 = Triangle(v1, v3, v2)
 
-        if stl_type == 'txt':
-            pystl.write_stl_triangle(f, t1)
-        else:
-            pystl.write_stl_bin_triangle(f, t1)
+        pystl.write_stl_triangle(f, t1, bin=stl_type)
+
+
+
+
+def draw_end_caps(f, im, j, add_hole=False, reverse_normal=False):
+    pi2 = math.pi * 2.0
+    radians_per_pixel = pi2 / float(im.width)
+    #radius_diff = outer_radius - inner_radius
+
+    fj = float(j)
+
+    for i in range(im.width-1):
+        draw_end_cap_segment(f, im, i, i+1, fj, radians_per_pixel, add_hole, reverse_normal)
+
+    # Draw from 0.0 to last
+    draw_end_cap_segment(f, im, im.width-1, 0.0, fj, radians_per_pixel, add_hole, reverse_normal)
+
+
+def draw_hole(f, im, j):
+    pi2 = math.pi * 2.0
+    radians_per_pixel = pi2 / float(im.width)
+
+    fj = float(j)
+
+    for i in range(im.width-1):
+        fi= float(i)
+
+        x1 = (hole_radius) * math.cos(fi * radians_per_pixel)
+        y1 = (hole_radius) * math.sin(fi * radians_per_pixel)
+        x2 = (hole_radius) * math.cos((fi+1.0) * radians_per_pixel)
+        y2 = (hole_radius) * math.sin((fi+1.0) * radians_per_pixel)
+
+        v1 = Vertex3(x1, y1, 0.0)
+        v2 = Vertex3(x2, y2, 0.0)
+        v3 = Vertex3(x2, y2, fj*z_scale)
+        v4 = Vertex3(x1, y1, fj*z_scale)
+
+        add_quad_to_stl(f, v4, v3, v2, v1)
 
     # draw from last to first wedge
-    fi = float(im.width-1)
-    c1 = im.getpixel((im.width-1,0))
-    c2 = im.getpixel((0,0))
-    # c1_offset = ((float(c1)-255.0)/255.0) * radius_diff
-    # c2_offset = ((float(c2)-255.0)/255.0) * radius_diff
+    x1 = (hole_radius) * math.cos((im.width-1.0) * radians_per_pixel)
+    y1 = (hole_radius) * math.sin((im.width-1.0) * radians_per_pixel)
+    x2 = (hole_radius) * math.cos((0.0) * radians_per_pixel)
+    y2 = (hole_radius) * math.sin((0.0) * radians_per_pixel)
 
-    c1_offset = calc_offset(c1, 255.0, radius_diff, invert_z)
-    c2_offset = calc_offset(c2, 255.0, radius_diff, invert_z)
+    v1 = Vertex3(x1, y1, 0.0)
+    v2 = Vertex3(x2, y2, 0.0)
+    v3 = Vertex3(x2, y2, fj*z_scale)
+    v4 = Vertex3(x1, y1, fj*z_scale)
 
-    x1 = (inner_radius + c1_offset) * math.cos(fi * radians_per_pixel)
-    y1 = (inner_radius + c1_offset) * math.sin(fi * radians_per_pixel)
-    x2 = (inner_radius + c2_offset) * math.cos((0.0) * radians_per_pixel)
-    y2 = (inner_radius + c2_offset) * math.sin((0.0) * radians_per_pixel)
-    v1 = Vertex3(x1, y1, fj*z_scale)
-    v2 = Vertex3(x2, y2, fj*z_scale)
-    v3 = Vertex3(0.0, 0.0, fj*z_scale)
-    t1 = Triangle(v1, v2, v3)
-    n = (0.0, 0.0, 1.0)
-    if stl_type == 'txt':
-        pystl.write_stl_triangle(f, t1, n)
-    else:
-        pystl.write_stl_bin_triangle(f, t1, n)
+    add_quad_to_stl(f, v4, v3, v2, v1)
 
 if __name__ == '__main__':
     print("starting")
     convert_to = 'L'
     _ = Image.open(img_name)
     im = _.convert(convert_to)
+    file_mode = 'w' if stl_type == 'txt' else 'wb'
 
-    if stl_type == 'txt':
-        f = open(stl_name, 'w')
-        pystl.write_stl_header(f)
-    else:
-        f = open(stl_name, 'wb')
-        num_triangles = (im.width*(im.height-1)*2) + (im.width * 2)
-        pystl.write_stl_bin_header(f, num_triangles)
+    with open(stl_name, file_mode) as f:
+        if add_hole:
+            num_triangles = (im.width*(im.height-1)*2) + (im.width * 6)
+        else:
+            num_triangles = (im.width*(im.height-1)*2) + (im.width * 2)
 
-    draw_cylinder(f, im)
-    draw_end_caps(f, im, 0.0)
-    draw_end_caps(f, im, im.height, reverse_normal=True)
+        pystl.write_stl_header(f, bin=stl_type, num_triangles=num_triangles)
 
-    if stl_type == 'txt':
-            pystl.write_stl_trailer(f)
+        draw_cylinder(f, im)
+        draw_end_caps(f, im, 0.0, add_hole=add_hole)
+        draw_end_caps(f, im, im.height, add_hole=add_hole, reverse_normal=True)
 
-    f.close()
+        if add_hole:
+            draw_hole(f, im, im.height)
+
+        pystl.write_stl_trailer(f)
+
     print("done")
+
