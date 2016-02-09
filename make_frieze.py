@@ -3,7 +3,16 @@
 Create a cylindrical die for an image.
 
 Todo:
+    - Convert to numpy
     - add cmd line options for file_name, stl_name, binary/txt
+
+    global variables to set:
+        img_name = string for input file image (e.g. 'output_001.bmp')
+        stl_name = string for output STL file name (e.g. 'frieze.stl')
+        inner_radius = inner radius for the cylinder (e.g. 50.0)
+        outer_radius = outer radius for the cylinder - radius of maximum color in image (e.g. 55.0)
+        invert_z = white is furthest out or black is (e.g. False)
+        stl_type = text or binary STL file. Text files get very big~ (e.g. 'bin')
 
 Len Wanger - 2/7/2016
 
@@ -18,13 +27,17 @@ Vertex3 = collections.namedtuple('Vertex', 'x y z')
 Triangle = collections.namedtuple('Triangle', 'v1 v2 v3')
 
 #img_name = 'output_001.bmp'
-img_name = 'freize1bw.jpg'
-#img_name = 'freize2bw.jpg'
+#img_name = 'freize1bw.jpg'
+img_name = 'freize2bw.jpg'
+#img_name = 'freize3bw.jpg'
 
 
 stl_name = 'frieze.stl'
 inner_radius = 50.0
 outer_radius = 55.0
+
+invert_z = False
+#invert_z = True
 
 radius_diff = outer_radius - inner_radius
 
@@ -43,11 +56,24 @@ def cylindrical_coord(x, rads):
     return (x1, y1)
 
 
+def calc_offset(c, max_c, invert_z=False):
+    if invert_z:
+        return (max_c - float(c)) / max_c
+    else:
+        return (float(c) - max_c) / max_c
+
+
 def add_quad_to_stl(f, c1, c2, c3, c4, fi, fj, radians_per_pixel):
-    c1_offset = ((float(c1) - 255.0) / 255.0) * radius_diff
-    c2_offset = ((float(c2) - 255.0) / 255.0) * radius_diff
-    c3_offset = ((float(c3) - 255.0) / 255.0) * radius_diff
-    c4_offset = ((float(c4) - 255.0) / 255.0) * radius_diff
+    # c1_offset = ((float(c1) - 255.0) / 255.0) * radius_diff
+    # c2_offset = ((float(c2) - 255.0) / 255.0) * radius_diff
+    # c3_offset = ((float(c3) - 255.0) / 255.0) * radius_diff
+    # c4_offset = ((float(c4) - 255.0) / 255.0) * radius_diff
+
+    c1_offset = calc_offset(c1, 255.0, invert_z)
+    c2_offset = calc_offset(c2, 255.0, invert_z)
+    c3_offset = calc_offset(c3, 255.0, invert_z)
+    c4_offset = calc_offset(c4, 255.0, invert_z)
+
     x1, y1 = cylindrical_coord((inner_radius + c1_offset), (fi * radians_per_pixel))
     x2, y2 = cylindrical_coord((inner_radius + c2_offset), ((fi + 1.0) * radians_per_pixel))
     x3, y3 = cylindrical_coord((inner_radius + c3_offset), ((fi + 1.0) * radians_per_pixel))
@@ -104,8 +130,12 @@ def draw_end_caps(f, im, j, reverse_normal=False):
         fi= float(i)
         c1 = im.getpixel((i,0))
         c2 = im.getpixel((i+1,0))
-        c1_offset = ((float(c1)-255.0)/255.0) * radius_diff
-        c2_offset = ((float(c2)-255.0)/255.0) * radius_diff
+        # c1_offset = ((float(c1)-255.0)/255.0) * radius_diff
+        # c2_offset = ((float(c2)-255.0)/255.0) * radius_diff
+
+        c1_offset = calc_offset(c1, 255.0, invert_z)
+        c2_offset = calc_offset(c2, 255.0, invert_z)
+
         x1 = (inner_radius + c1_offset) * math.cos(fi * radians_per_pixel)
         y1 = (inner_radius + c1_offset) * math.sin(fi * radians_per_pixel)
         x2 = (inner_radius + c2_offset) * math.cos((fi + 1.0) * radians_per_pixel)
@@ -130,8 +160,12 @@ def draw_end_caps(f, im, j, reverse_normal=False):
     fi = float(im.width-1)
     c1 = im.getpixel((im.width-1,0))
     c2 = im.getpixel((0,0))
-    c1_offset = ((float(c1)-255.0)/255.0) * radius_diff
-    c2_offset = ((float(c2)-255.0)/255.0) * radius_diff
+    # c1_offset = ((float(c1)-255.0)/255.0) * radius_diff
+    # c2_offset = ((float(c2)-255.0)/255.0) * radius_diff
+
+    c1_offset = calc_offset(c1, 255.0, invert_z)
+    c2_offset = calc_offset(c2, 255.0, invert_z)
+
     x1 = (inner_radius + c1_offset) * math.cos(fi * radians_per_pixel)
     y1 = (inner_radius + c1_offset) * math.sin(fi * radians_per_pixel)
     x2 = (inner_radius + c2_offset) * math.cos((0.0) * radians_per_pixel)
