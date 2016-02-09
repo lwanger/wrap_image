@@ -3,6 +3,7 @@
 Create a cylindrical die for an image.
 
 Todo:
+    - out_radius not working... bumps don't get bigger
     - Convert to numpy
     - add cmd line options for file_name, stl_name, binary/txt
 
@@ -11,6 +12,7 @@ Todo:
         stl_name = string for output STL file name (e.g. 'frieze.stl')
         inner_radius = inner radius for the cylinder (e.g. 50.0)
         outer_radius = outer radius for the cylinder - radius of maximum color in image (e.g. 55.0)
+        z_scale = scale value for the Z direction (e.g. 1.0) for 1mm per pixel)
         invert_z = white is furthest out or black is (e.g. False)
         stl_type = text or binary STL file. Text files get very big~ (e.g. 'bin')
 
@@ -34,7 +36,8 @@ img_name = 'freize2bw.jpg'
 
 stl_name = 'frieze.stl'
 inner_radius = 50.0
-outer_radius = 55.0
+outer_radius = 58.0
+z_scale=1.0
 
 invert_z = False
 #invert_z = True
@@ -56,32 +59,31 @@ def cylindrical_coord(x, rads):
     return (x1, y1)
 
 
-def calc_offset(c, max_c, invert_z=False):
+def calc_offset(c, max_c, scale, invert_z=False):
+    fc = float(c)
+    mc = float(max_c)
+    s = float(scale)
+
     if invert_z:
-        return (max_c - float(c)) / max_c
+        return ((mc - fc) / mc) * s
     else:
-        return (float(c) - max_c) / max_c
+        return ((fc - mc) / mc) * s
 
 
 def add_quad_to_stl(f, c1, c2, c3, c4, fi, fj, radians_per_pixel):
-    # c1_offset = ((float(c1) - 255.0) / 255.0) * radius_diff
-    # c2_offset = ((float(c2) - 255.0) / 255.0) * radius_diff
-    # c3_offset = ((float(c3) - 255.0) / 255.0) * radius_diff
-    # c4_offset = ((float(c4) - 255.0) / 255.0) * radius_diff
-
-    c1_offset = calc_offset(c1, 255.0, invert_z)
-    c2_offset = calc_offset(c2, 255.0, invert_z)
-    c3_offset = calc_offset(c3, 255.0, invert_z)
-    c4_offset = calc_offset(c4, 255.0, invert_z)
+    c1_offset = calc_offset(c1, 255.0, radius_diff, invert_z)
+    c2_offset = calc_offset(c2, 255.0, radius_diff, invert_z)
+    c3_offset = calc_offset(c3, 255.0, radius_diff, invert_z)
+    c4_offset = calc_offset(c4, 255.0, radius_diff, invert_z)
 
     x1, y1 = cylindrical_coord((inner_radius + c1_offset), (fi * radians_per_pixel))
     x2, y2 = cylindrical_coord((inner_radius + c2_offset), ((fi + 1.0) * radians_per_pixel))
     x3, y3 = cylindrical_coord((inner_radius + c3_offset), ((fi + 1.0) * radians_per_pixel))
     x4, y4 = cylindrical_coord((inner_radius + c4_offset), (fi * radians_per_pixel))
-    v1 = Vertex3(x1, y1, fj)
-    v2 = Vertex3(x2, y2, fj)
-    v3 = Vertex3(x3, y3, fj + 1.0)
-    v4 = Vertex3(x4, y4, fj + 1.0)
+    v1 = Vertex3(x1, y1, (fj)*z_scale)
+    v2 = Vertex3(x2, y2, (fj)*z_scale)
+    v3 = Vertex3(x3, y3, (fj + 1.0)*z_scale)
+    v4 = Vertex3(x4, y4, (fj + 1.0)*z_scale)
     t1 = Triangle(v1, v2, v4)
     t2 = Triangle(v2, v3, v4)
 
@@ -133,17 +135,17 @@ def draw_end_caps(f, im, j, reverse_normal=False):
         # c1_offset = ((float(c1)-255.0)/255.0) * radius_diff
         # c2_offset = ((float(c2)-255.0)/255.0) * radius_diff
 
-        c1_offset = calc_offset(c1, 255.0, invert_z)
-        c2_offset = calc_offset(c2, 255.0, invert_z)
+        c1_offset = calc_offset(c1, 255.0, radius_diff, invert_z)
+        c2_offset = calc_offset(c2, 255.0, radius_diff, invert_z)
 
         x1 = (inner_radius + c1_offset) * math.cos(fi * radians_per_pixel)
         y1 = (inner_radius + c1_offset) * math.sin(fi * radians_per_pixel)
         x2 = (inner_radius + c2_offset) * math.cos((fi + 1.0) * radians_per_pixel)
         y2 = (inner_radius + c2_offset) * math.sin((fi + 1.0) * radians_per_pixel)
 
-        v1 = Vertex3(x1, y1, fj)
-        v2 = Vertex3(x2, y2, fj)
-        v3 = Vertex3(0.0, 0.0, fj)
+        v1 = Vertex3(x1, y1, fj*z_scale)
+        v2 = Vertex3(x2, y2, fj*z_scale)
+        v3 = Vertex3(0.0, 0.0, fj*z_scale)
         #t1 = Triangle(v1, v2, v3)
 
         if reverse_normal:
@@ -163,16 +165,16 @@ def draw_end_caps(f, im, j, reverse_normal=False):
     # c1_offset = ((float(c1)-255.0)/255.0) * radius_diff
     # c2_offset = ((float(c2)-255.0)/255.0) * radius_diff
 
-    c1_offset = calc_offset(c1, 255.0, invert_z)
-    c2_offset = calc_offset(c2, 255.0, invert_z)
+    c1_offset = calc_offset(c1, 255.0, radius_diff, invert_z)
+    c2_offset = calc_offset(c2, 255.0, radius_diff, invert_z)
 
     x1 = (inner_radius + c1_offset) * math.cos(fi * radians_per_pixel)
     y1 = (inner_radius + c1_offset) * math.sin(fi * radians_per_pixel)
     x2 = (inner_radius + c2_offset) * math.cos((0.0) * radians_per_pixel)
     y2 = (inner_radius + c2_offset) * math.sin((0.0) * radians_per_pixel)
-    v1 = Vertex3(x1, y1, fj)
-    v2 = Vertex3(x2, y2, fj)
-    v3 = Vertex3(0.0, 0.0, fj)
+    v1 = Vertex3(x1, y1, fj*z_scale)
+    v2 = Vertex3(x2, y2, fj*z_scale)
+    v3 = Vertex3(0.0, 0.0, fj*z_scale)
     t1 = Triangle(v1, v2, v3)
     n = (0.0, 0.0, 1.0)
     if stl_type == 'txt':
@@ -203,4 +205,3 @@ if __name__ == '__main__':
 
     f.close()
     print("done")
-
