@@ -68,7 +68,11 @@ class PySTL(object):
             self.f.write('endsolid \n' )
 
 
-    def write_stl_triangle(self, triangle, normal=None):
+    def add_triangle(self, triangle, normal=None):
+        """  Write a triamgle to the STL file
+        :param triangle: a tuple of 3 vertices. Each being a tuple of 3 floats
+        :param normal: a tuple of 3 floats for the normal
+        """
         if not normal:
             normal = self.calc_normal(triangle)
 
@@ -92,9 +96,12 @@ class PySTL(object):
             self.f.write('  endfacet \n')
 
 
-    def add_quad_to_stl(self, v1, v2, v3, v4):
-        self.write_stl_triangle((v1, v2, v4))
-        self.write_stl_triangle((v2, v3, v4))
+    def add_quad(self, v1, v2, v3, v4):
+        """  Write a quadrilateral to the STL file
+        :param triangle: a tuple of 4 vertices. Each being a tuple of 3 floats
+        """
+        self.add_triangle((v1, v2, v4))
+        self.add_triangle((v2, v3, v4))
 
 
     def length_vector(self, v):
@@ -134,9 +141,9 @@ if __name__ == '__main__':
     t2 = (v2,v3,v4)
 
     with PySTL('stl_test_bin.stl',  bin=True) as stl:
-        stl.write_stl_triangle(t1)
-        stl.write_stl_triangle(t2)
+        stl.add_triangle(t1)
+        stl.add_triangle(t2)
 
     with PySTL('stl_test_txt.stl',  bin=False) as stl:
-        stl.write_stl_triangle(t1)
-        stl.write_stl_triangle(t2)
+        stl.add_triangle(t1)
+        stl.add_triangle(t2)
