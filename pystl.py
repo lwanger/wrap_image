@@ -9,15 +9,13 @@ import math
 import struct
 
 class PySTL(object):
-    def __init__(self, file_name, bin=True, model_name='', num_triangles=0):
+    def __init__(self, file_name, bin=True, model_name=''):
         self.f = None
         self.model_name = model_name
         self.file_name = file_name
         self.is_bin = bin
-        self.num_triangles = num_triangles if num_triangles >= 0 else 0
-        self.header_written = self.trailer_written = False
-        self.track_triangles = False if num_triangles > 0 else True
-        self.num_tri_pos = None
+        self.num_triangles = 0
+        self.trailer_written = False
 
 
     def open(self):
@@ -51,23 +49,20 @@ class PySTL(object):
             self.f.write('solid ' + self.model_name + '\n' )
 
 
-    def write_num_triangles_bin(self):
+    def write_num_triangles_bin(self, write_num_triangles=False):
         if self.is_bin:
-            if not self.num_tri_pos:
-                # on __enter__ record the position
-                self.num_tri_pos = self.f.tell()
+            if write_num_triangles:
+                self.f.seek(80)
+                self.f.write(struct.pack("I", self.num_triangles))
             else:
-                # on __exit__ update the number of triangles
-                self.f.seek(self.num_tri_pos)
-            self.f.write(struct.pack("I", 0 if self.num_triangles < 0 else self.num_triangles))
+                self.f.write(struct.pack("I", 0))
         else:
             raise RuntimeError('Cannot call write_num_triangles_bin on a text STL file.')
 
 
     def write_stl_trailer(self):
         if self.is_bin:
-            if self.track_triangles:
-                self.write_num_triangles_bin()
+            self.write_num_triangles_bin(True)
         else:
             # No trailer on binary STL files
             self.f.write('endsolid \n' )
@@ -86,6 +81,7 @@ class PySTL(object):
                      triangle[2][0], triangle[2][1], triangle[2][2],
                      0 ]
             self.f.write(struct.pack("12fH", *data))
+            self.num_triangles += 1
         else:
             self.f.write('  facet normal {:.3f} {:.3f} {:.3f}\n'.format(normal[0], normal[1], normal[2]) )
             self.f.write('    outer loop\n' )
@@ -95,8 +91,10 @@ class PySTL(object):
             self.f.write('    endloop\n' )
             self.f.write('  endfacet \n')
 
-        if self.track_triangles:
-            self.num_triangles += 1
+
+    def add_quad_to_stl(self, v1, v2, v3, v4):
+        self.write_stl_triangle((v1, v2, v4))
+        self.write_stl_triangle((v2, v3, v4))
 
 
     def length_vector(self, v):
@@ -128,8 +126,6 @@ class PySTL(object):
 
 if __name__ == '__main__':
     stl_name = 'bin_stl_test.stl'
-    #num_triangles=2    # pass number of triangles in if you know the number in advance
-    num_triangles=0 # automatically track number of triangles
     v1 = (0.0, 0.0, 0.5)
     v2 = (0.0, 1.0, 0.0)
     v3 = (1.0, 1.0, 0.5)
@@ -137,10 +133,10 @@ if __name__ == '__main__':
     t1 = (v1,v2,v4)
     t2 = (v2,v3,v4)
 
-    with PySTL('stl_test_bin.stl',  bin=True, num_triangles=num_triangles) as stl:
+    with PySTL('stl_test_bin.stl',  bin=True) as stl:
         stl.write_stl_triangle(t1)
         stl.write_stl_triangle(t2)
 
-    with PySTL('stl_test_txt.stl',  bin=False, num_triangles=num_triangles) as stl:
+    with PySTL('stl_test_txt.stl',  bin=False) as stl:
         stl.write_stl_triangle(t1)
         stl.write_stl_triangle(t2)
