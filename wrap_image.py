@@ -1,24 +1,12 @@
 
 """
-Create a cylindrical die for an image.
+Create a 3D object of an image heightfield wrapped around a cylindrical.
 
-- IO on image
-- deeper pattern
-- cutting edges
+    TODO:
+        - cutting edges (for cookie cutters)
 
-
-Todo:
-    - clean up code
-        - Get rid of global variables
-
-    global variables to set:
-        img_name = string for input file image (e.g. 'output_001.bmp')
-        stl_name = string for output STL file name (e.g. 'frieze.stl')
-        inner_radius = inner radius for the cylinder (e.g. 50.0)
-        outer_radius = outer radius for the cylinder - radius of maximum color in image (e.g. 55.0)
-        z_scale = scale value for the Z direction (e.g. 1.0) for 1mm per pixel)
-        invert_offsets = white is furthest out or black is (e.g. False)
-        stl_type = text or binary STL file. Text files get very big~ (e.g. 'bin')
+    usage:
+        python make_frieze.py -i image -o image.stl -ir 70.0 -or 80.0
 
 Len Wanger
 last updated: 2/15/2016
@@ -66,13 +54,10 @@ def calc_vertices(im):
         for j in range(im.height):
             fi = float(i)
             fj = float(j)
-            c = im.getpixel((i, j))
-            c_offset = calc_offset(c, 255.0, radius_diff, invert_offsets)
+            c_offset = calc_offset(im.getpixel((i, j)), 255.0, radius_diff, invert_offsets)
             x, y = cylindrical_coord((inner_radius + c_offset), (fi * radians_per_pixel))
             z = (fj)*z_scale
-            vertices[i][j][0] = x
-            vertices[i][j][1] = y
-            vertices[i][j][2] = z
+            vertices[i][j] = (x, y, z)
 
     return (vertices)
 
@@ -97,7 +82,7 @@ def draw_cylinder(stl, vertices):
         stl.add_quad(v1, v2, v3, v4)
 
 
-def draw_end_cap_segment(stl, vertices, i1, i2, j, radians_per_pixel, add_hole, reverse_normal):
+def draw_end_cap_segment(stl, vertices, i1, i2, j, radians_per_pixel, add_hole, hole_radius, reverse_normal):
     fi1, fi2, fj = float(i1), float(i2), float(j)
 
     v1 = vertices[i1][j]
@@ -132,17 +117,16 @@ def draw_end_caps(stl, vertices, j, add_hole=False, reverse_normal=False):
     pi2 = math.pi * 2.0
     radians_per_pixel = pi2 / float(width)
     for i in range(width-1):
-        draw_end_cap_segment(stl, vertices, i, i+1, j, radians_per_pixel, add_hole, reverse_normal)
+        draw_end_cap_segment(stl, vertices, i, i+1, j, radians_per_pixel, add_hole, hole_radius, reverse_normal)
 
     # Draw from 0.0 to last
-    draw_end_cap_segment(stl, vertices, im.width-1, 0.0, j, radians_per_pixel, add_hole, reverse_normal)
+    draw_end_cap_segment(stl, vertices, width-1, 0.0, j, radians_per_pixel, add_hole, hole_radius, reverse_normal)
 
 
-def draw_hole(stl, vertices):
-    pi2 = math.pi * 2.0
-    radians_per_pixel = pi2 / float(im.width)
+def draw_hole(stl, vertices, hole_radius, z_scale):
     width, height, _ = vertices.shape
-
+    pi2 = math.pi * 2.0
+    radians_per_pixel = pi2 / float(width)
     fj = float(height)
 
     for i in range(width-1):
@@ -213,6 +197,6 @@ if __name__ == '__main__':
         draw_end_caps(stl, vertices, im.height-1, add_hole=add_hole, reverse_normal=True)
 
         if add_hole:
-            draw_hole(stl, vertices)
+            draw_hole(stl, vertices, hole_radius, z_scale)
 
     print("Frieze completed succesfully.")
