@@ -1,6 +1,15 @@
 """
 PySTL - a simple package to write STL files
 
+
+The easiest way to use this is with the context manager. Open the file, write triangles, and exit
+the context block:
+
+    with PySTL('stl_test.stl') as stl:
+        stl.add_triangle( (0.0, 0.0, 0.5), (0.0, 1.0, 0.0), (1.0, 1.0, 0.5) )
+
+For debugging you can use text-based STL files (by passing in False for the bin parameter).
+
 Len Wanger
 last updated: 02-15-2016
 """
@@ -42,7 +51,7 @@ class PySTL(object):
 
     def write_stl_header(self):
         if self.is_bin:
-            header_str = ''
+            header_str = b''
             self.f.write(struct.pack("80s", header_str))
             self.write_num_triangles_bin()
         else:
@@ -77,7 +86,9 @@ class PySTL(object):
             normal = self.calc_normal(triangle)
 
         if self.is_bin:
-            """ Each triangle is 4 sets of 3 floats - normal, three verticices, then a byte count (which can be used for color)"""
+            """ Each triangle is 4 sets of 3 floats - normal, three vertices, then a byte count
+	    (which can be used for color)"""
+
 
             data = [ normal[0], normal[1], normal[2],
                      triangle[0][0], triangle[0][1], triangle[0][2],
@@ -112,8 +123,11 @@ class PySTL(object):
     def unit_vector(self, v):
         """ return the unit vector for a vector """
         l = self.length_vector(v)
-        return (v[0] / l, v[1] / l, v[2] / l)
-
+        #return (v[0] / l, v[1] / l, v[2] / l)
+        try:
+            return (v[0] / l, v[1] / l, v[2] / l)
+        except RuntimeWarning as e:
+            pass
 
     def calc_normal(self, t):
         """ Return the normal for a triangle. Make sure it's a unit vector """

@@ -115,7 +115,6 @@ def draw_end_cap_segment(stl, vertices, i1, i2, j, radians_per_pixel, reverse_x,
         v3 = Vertex3(x3, y3, fj*z_scale)
         v4 = Vertex3(x4, y4, fj*z_scale)
 
-        #if reverse_normal:
         if reverse_x ^ reverse_normal:
             stl.add_quad(v1, v2, v3, v4)
         else:
@@ -139,7 +138,7 @@ def draw_end_caps(stl, vertices, j, reverse_x, add_hole=False, reverse_normal=Fa
         draw_end_cap_segment(stl, vertices, i, i+1, j, radians_per_pixel, reverse_x, add_hole, hole_radius, reverse_normal)
 
     # Draw from 0.0 to last
-    draw_end_cap_segment(stl, vertices, width-1, 0.0, j, radians_per_pixel, reverse_x, add_hole, hole_radius, reverse_normal)
+    draw_end_cap_segment(stl, vertices, width-1, 0, j, radians_per_pixel, reverse_x, add_hole, hole_radius, reverse_normal)
 
 
 def draw_hole(stl, vertices, hole_radius, z_scale):
@@ -180,8 +179,8 @@ def draw_hole(stl, vertices, hole_radius, z_scale):
 if __name__ == '__main__':
     # read arguments
     parser = argparse.ArgumentParser(description='Wrap an image around a cylinder')
-    parser.add_argument('-i', '--image_file', nargs=1, help='Input image name')
-    parser.add_argument('-o', '--output_file', nargs=1, help='Output STL file name')
+    parser.add_argument('-i', '--image_file', nargs=1, help='Input image name', required=True)
+    parser.add_argument('-o', '--output_file', nargs=1, help='Output STL file name', required=True)
     parser.add_argument('-ir', '--inner_radius', type=float, help='Radius of minimum image value (float)', default=70.0)
     parser.add_argument('-or', '--outer_radius', type=float, help='Radius of maximum image value (float)', default=80.0)
     parser.add_argument('-hr', '--hole_radius', type=float, help='Radius of hole (float - use negative for no hole)', default=-1.0)
@@ -212,7 +211,7 @@ if __name__ == '__main__':
     with pystl.PySTL(stl_name,  bin=True) as stl:
         vertices = calc_vertices(im, inner_radius, outer_radius, z_scale, invert_offsets=invert_offsets, reverse_x=reverse_x)
         draw_cylinder(stl, vertices, reverse_x)
-        draw_end_caps(stl, vertices, 0.0, reverse_x, add_hole=add_hole)
+        draw_end_caps(stl, vertices, 0, reverse_x, add_hole=add_hole)
         draw_end_caps(stl, vertices, im.height-1, reverse_x, add_hole=add_hole, reverse_normal=True)
 
         if add_hole:
