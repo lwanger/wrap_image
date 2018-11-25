@@ -123,7 +123,6 @@ class PySTL(object):
     def unit_vector(self, v):
         """ return the unit vector for a vector """
         l = self.length_vector(v)
-        #return (v[0] / l, v[1] / l, v[2] / l)
         try:
             return (v[0] / l, v[1] / l, v[2] / l)
         except RuntimeWarning as e:

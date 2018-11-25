@@ -20,33 +20,10 @@ last updated: 2/15/2016
 import argparse
 import numpy as np
 import math
-import collections
 from PIL import Image
 import pystl
 
-Vertex3 = collections.namedtuple('Vertex', 'x y z')
-Triangle = collections.namedtuple('Triangle', 'v1 v2 v3')
-
-def make_triangle(d):
-    """ Take a list of 3 points and return a Triangle """
-    return Triangle(Vertex3(d[0][0], d[0][1], d[0][2]), Vertex3(d[1][0], d[1][1], d[1][2]), Vertex3(d[2][0], d[2][1], d[2][2]))
-
-
-def cylindrical_coord(x, rads):
-    x1 = x * math.cos(rads)
-    y1 = x * math.sin(rads)
-    return (x1, y1)
-
-
-def calc_offset(c, max_c, scale, invert_offsets=False):
-    fc = float(c)
-    mc = float(max_c)
-    s = float(scale)
-
-    if invert_offsets:
-        return ((mc - fc) / mc) * s
-    else:
-        return ((fc - mc) / mc) * s
+from utils import Vertex3, Triangle, cylindrical_coord, calc_offset
 
 
 def calc_vertices(im, inner_radius, outer_radius, z_scale, invert_offsets=False, reverse_x=False):
