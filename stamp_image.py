@@ -2,10 +2,6 @@
 """
 Create a 3D object of a height field of an image  on the face of a cylinder.
 
-    TODO:
-        - can't open in netfabb (opens in meshlab and paint3d). Problems in meshmixer. Asks to unify duplicated
-            vertices in meshlab
-
     usage:
         python stamp_image.py -i image.png -o image.stl
 
@@ -328,15 +324,15 @@ def draw_sidewalls(stl, vertices, outer_radius, margin_pct, z):
 
 
 if __name__ == '__main__':
-    # read arguments
+    # read arguments - note boolean type doesn't work as expected so do a lambda on the string for mirror and invert images
     parser = argparse.ArgumentParser(description='Wrap an image around a cylinder')
     parser.add_argument('-i', '--image_file', nargs=1, help='Input image name', required=True)
     parser.add_argument('-o', '--output_file', nargs=1, help='Output STL file name', required=True)
     parser.add_argument('-m', '--margin', type=float, help='Margin around the image (percentage)', default=1.0)
     parser.add_argument('-il', '--image_low', type=float, help='Low Z value for the stamp Z height (float)', default=0.0)
     parser.add_argument('-ih', '--image_high', type=float, help='High Z value for the stamp Z height (float)', default=-4.0)
-    parser.add_argument('-ii', '--invert_image', type=bool, help='Invert the image (bool - i.e. darker colors in image stick out further)', default=True)
-    parser.add_argument('-mi', '--mirror_image', type=bool, help='Mirror the image', default=True)
+    parser.add_argument('-ii', '--invert_image', type=lambda s: s.lower() in ['true', 't', 'yes', '1'], help='Invert the image (bool - i.e. darker colors in image stick out further)', default=True)
+    parser.add_argument('-mi', '--mirror_image', type=lambda s: s.lower() in ['true', 't', 'yes', '1'], help='Mirror the image', default=True)
     parser.add_argument('-or', '--outer_radius', type=float, help='Radius of the cylinder (float)', default=20.0)
     parser.add_argument('-r', '--roundness', type=int, help='roundness of the cylinder (int)', default=6)
     parser.add_argument('-z', '--z_height', type=float, help='height of the cylinder for the stamp', default=70.0)
@@ -346,7 +342,8 @@ if __name__ == '__main__':
     image_name = args.image_file[0]
     stl_name = args.output_file[0]
     margin = args.margin
-    invert_image = args.invert_image
+    #invert_image = args.invert_image
+    invert_image = True if args.invert_image else False
     mirror_image = True if args.mirror_image else False
     low_z = args.image_low
     high_z = args.image_high
