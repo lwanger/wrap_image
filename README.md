@@ -8,6 +8,8 @@ usage:
 
         This will wrap image.png around a solid cylinder that is 70.0 millimeters for black pixels and 80 millimeters
         for white pixels, with a 40 millimeter hole in the middle. Use -h to see all the available options.
+        
+        note: on some platforms you may need to type "python3" instead of "python"
 
 # stamp_image 
 Python program to create a stamp (image on the bottom face of the cylinder).
